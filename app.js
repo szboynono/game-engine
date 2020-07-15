@@ -41,7 +41,6 @@ app.get("/room", (req, res, next) => {
     socketMap.set(socket.id, {
       userSocket: socket,
       username: "",
-      spy: false,
     });
     socket.emit("id", socket.id);
 
@@ -49,20 +48,16 @@ app.get("/room", (req, res, next) => {
     const firstGuyId = Array.from(socketMap.keys())[0];
     nsp.emit("owner", firstGuyId);
 
-    // name logic
-    socket.on("name", (userInfo) => {
-      if (userInfo.username) {
-        socketMap.set(userInfo.id, {
-          ...socketMap.get(userInfo.id),
-          username: userInfo.username,
-        });
-        const usernames = Array.from(
-          socketMap.values(),
-          (value) => value.username
-        );
-        nsp.emit("users", usernames);
+    socket.on("name", (name) => {
+      if (name) {
+        socketMap.set(socket.id, name);
       }
-    });
+      console.log(socketMap);
+      const usernames = Array.from(
+        socketMap.values()
+      );
+      nsp.emit("userList", usernames);
+    })
 
     // start game
     socket.on("start", () => {
@@ -73,6 +68,7 @@ app.get("/room", (req, res, next) => {
     // disconnect
     socket.on("disconnect", () => {
       socketMap.delete(socket.id);
+      console.log(socketMap);
       console.info(`Client gone [id=${socket.id}]`);
     });
   });

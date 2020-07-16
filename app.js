@@ -68,6 +68,10 @@ app.get("/room", (req, res, next) => {
     // disconnect
     socket.on("disconnect", () => {
       socketMap.delete(socket.id);
+      const usernames = Array.from(
+        socketMap.values()
+      );
+      nsp.emit("userList", usernames);
       console.log(socketMap);
       console.info(`Client gone [id=${socket.id}]`);
     });

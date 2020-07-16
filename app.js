@@ -2,6 +2,7 @@ const app = require("express")();
 const http = require("http").createServer(app);
 const io = require("socket.io")(http);
 const bodyPaser = require("body-parser");
+const { notStrictEqual } = require("assert");
 
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -24,6 +25,7 @@ function makeid(length) {
   return result;
 }
 
+
 app.get("/room", (req, res, next) => {
   const roomNumber = makeid(4);
   const messages = [];
@@ -45,8 +47,10 @@ app.get("/room", (req, res, next) => {
     socket.emit("id", socket.id);
 
     //owner logic
-    const firstGuyId = Array.from(socketMap.keys())[0];
-    nsp.emit("owner", firstGuyId);
+    if(!gameStart) {
+      const firstGuyId = Array.from(socketMap.keys())[0];
+      nsp.emit("owner", firstGuyId);
+    }
 
     socket.on("name", (name) => {
       if (name) {
@@ -65,6 +69,7 @@ app.get("/room", (req, res, next) => {
       nsp.emit("started");
     });
 
+    
     // disconnect
     socket.on("disconnect", () => {
       socketMap.delete(socket.id);

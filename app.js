@@ -2,7 +2,6 @@ const app = require("express")();
 const http = require("http").createServer(app);
 const io = require("socket.io")(http);
 const bodyPaser = require("body-parser");
-const { notStrictEqual } = require("assert");
 
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -25,10 +24,22 @@ function makeid(length) {
   return result;
 }
 
+function shuffle(array) {
+  return array.sort(() => Math.random() - 0.5);
+}
+
+function assignRole(socketMap, roles) {
+  roles.forEach((role, i) => {
+    const keys = Array.from(socketMap.keys())
+    socketMap.set(keys[i], { ...socketMap.get(keys), role: role })
+  });
+}
+
 
 app.get("/room", (req, res, next) => {
   const roomNumber = makeid(4);
   const messages = [];
+  const roles = ['role1', 'role2'];
   let gameStart = false;
 
   res.send(roomNumber);
@@ -47,7 +58,7 @@ app.get("/room", (req, res, next) => {
     socket.emit("id", socket.id);
 
     //owner logic
-    if(!gameStart) {
+    if (!gameStart) {
       const firstGuyId = Array.from(socketMap.keys())[0];
       nsp.emit("owner", firstGuyId);
     }
@@ -56,7 +67,6 @@ app.get("/room", (req, res, next) => {
       if (name) {
         socketMap.set(socket.id, name);
       }
-      console.log(socketMap);
       const usernames = Array.from(
         socketMap.values()
       );
@@ -66,10 +76,14 @@ app.get("/room", (req, res, next) => {
     // start game
     socket.on("start", () => {
       gameStart = true;
+      const shuffledRoles = shuffle(roles);
+      assignRole(socketMap, shuffledRoles);
+      console.log(socketMap);
       nsp.emit("started");
+
     });
 
-    
+
     // disconnect
     socket.on("disconnect", () => {
       socketMap.delete(socket.id);

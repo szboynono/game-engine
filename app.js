@@ -30,7 +30,7 @@ function shuffle(array) {
 
 function assignRole(socketMap, roles) {
   roles.forEach((role, i) => {
-    const keys = Array.from(socketMap.keys())
+    const keys = Array.from(socketMap.keys());
     socketMap.set(keys[i], { ...socketMap.get(keys), role: role })
   });
 }
@@ -78,11 +78,13 @@ app.get("/room", (req, res, next) => {
       gameStart = true;
       const shuffledRoles = shuffle(roles);
       assignRole(socketMap, shuffledRoles);
-      console.log(socketMap);
       nsp.emit("started");
-
     });
 
+    // roles
+    socket.on("requestRole", () => {
+      socket.emit("giveRole", socketMap.get(socket.id).role);
+    });
 
     // disconnect
     socket.on("disconnect", () => {

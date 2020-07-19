@@ -29,17 +29,24 @@ function shuffle(array) {
 }
 
 function assignRole(socketMap, roles) {
-  roles.forEach((role, i) => {
-    const keys = Array.from(socketMap.keys());
-    socketMap.set(keys[i], { ...socketMap.get(keys), role: role })
+  socketMap.forEach((value, key) => {
+    let roleIndex = 0;
+    socketMap.set(key, {...value, role: roles[roleIndex]})
+    roleIndex++;
   });
+}
+
+function readyCheck(socketMap) {
+  console.log(socketMap);
+  const check =  Array.from(socketMap.values()).every(value => value.ready);
+  return check;
 }
 
 
 app.get("/room", (req, res, next) => {
   const roomNumber = makeid(4);
   const messages = [];
-  const roles = ['role1', 'role2'];
+  const roles = ['Loyal Servant of Arthor', 'Loyal Servant of Arthor', 'MERLIN', 'Minion of Mordred', 'ASSASIN'];
   let gameStart = false;
 
   res.send(roomNumber);
@@ -52,8 +59,8 @@ app.get("/room", (req, res, next) => {
 
     // send id
     socketMap.set(socket.id, {
-      userSocket: socket,
-      username: "",
+      role: "",
+      ready: false
     });
     socket.emit("id", socket.id);
 
@@ -65,12 +72,13 @@ app.get("/room", (req, res, next) => {
 
     socket.on("name", (name) => {
       if (name) {
-        socketMap.set(socket.id, name);
+        socketMap.set(socket.id, {...socketMap.get(socket.id), name: name});
       }
-      const usernames = Array.from(
-        socketMap.values()
-      );
-      nsp.emit("userList", usernames);
+      const names = [];
+      socketMap.forEach((value, key) => {
+        names.push(value.name);
+      })
+      nsp.emit("userList", names);
     })
 
     // start game
@@ -86,6 +94,14 @@ app.get("/room", (req, res, next) => {
       socket.emit("giveRole", socketMap.get(socket.id).role);
     });
 
+    // ready
+    socket.on("ready", () => {
+      socketMap.set(socket.id, {...socketMap.get(socket.id), ready: true});
+      if(readyCheck(socketMap)){
+        nsp.emit('readyCheckDone');
+      }
+    });
+
     // disconnect
     socket.on("disconnect", () => {
       socketMap.delete(socket.id);
@@ -93,7 +109,6 @@ app.get("/room", (req, res, next) => {
         socketMap.values()
       );
       nsp.emit("userList", usernames);
-      console.log(socketMap);
       console.info(`Client gone [id=${socket.id}]`);
     });
   });

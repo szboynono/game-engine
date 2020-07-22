@@ -29,16 +29,16 @@ function shuffle(array) {
 }
 
 function assignRole(socketMap, roles) {
+  let roleIndex = 0;
   socketMap.forEach((value, key) => {
-    let roleIndex = 0;
-    socketMap.set(key, {...value, role: roles[roleIndex]})
+    socketMap.set(key, { ...value, role: roles[roleIndex] })
     roleIndex++;
   });
 }
 
 function readyCheck(socketMap) {
   console.log(socketMap);
-  const check =  Array.from(socketMap.values()).every(value => value.ready);
+  const check = Array.from(socketMap.values()).every(value => value.ready);
   return check;
 }
 
@@ -48,6 +48,7 @@ app.get("/room", (req, res, next) => {
   const messages = [];
   const roles = ['Loyal Servant of Arthor', 'Loyal Servant of Arthor', 'MERLIN', 'Minion of Mordred', 'ASSASIN'];
   let gameStart = false;
+  let turn = 0;
 
   res.send(roomNumber);
   const nsp = io.of("/" + roomNumber);
@@ -72,7 +73,7 @@ app.get("/room", (req, res, next) => {
 
     socket.on("name", (name) => {
       if (name) {
-        socketMap.set(socket.id, {...socketMap.get(socket.id), name: name});
+        socketMap.set(socket.id, { ...socketMap.get(socket.id), name: name });
       }
       const names = [];
       socketMap.forEach((value, key) => {
@@ -96,11 +97,32 @@ app.get("/room", (req, res, next) => {
 
     // ready
     socket.on("ready", () => {
-      socketMap.set(socket.id, {...socketMap.get(socket.id), ready: true});
-      if(readyCheck(socketMap)){
+      socketMap.set(socket.id, { ...socketMap.get(socket.id), ready: true });
+      if (readyCheck(socketMap)) {
         nsp.emit('readyCheckDone');
+        gameStart = true;
       }
     });
+
+    // leader
+    socket.on("askForFirstLeader", () => {
+      const usernames = Array.from(
+        socketMap.values()
+      );
+      socket.emit('leader', usernames[turn]);
+    });
+
+    socket.on('turnOver', ()=> {
+      const usernames = Array.from(
+        socketMap.values()
+      );
+      if(turn >= usernames.length - 1) {
+        turn = 0;
+      } else {
+        turn++;
+      }
+      nsp.emit('leader', usernames[turn]);
+    })
 
     // disconnect
     socket.on("disconnect", () => {

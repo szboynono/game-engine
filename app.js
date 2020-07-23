@@ -2,6 +2,7 @@ const app = require("express")();
 const http = require("http").createServer(app);
 const io = require("socket.io")(http);
 const bodyPaser = require("body-parser");
+const { ifError } = require("assert");
 
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -77,7 +78,7 @@ app.get("/room", (req, res, next) => {
       }
       const names = [];
       socketMap.forEach((value, key) => {
-        names.push(value.name);
+        names.push({name: value.name});
       })
       nsp.emit("userList", names);
     })
@@ -109,7 +110,10 @@ app.get("/room", (req, res, next) => {
       const usernames = Array.from(
         socketMap.values()
       );
-      socket.emit('leader', usernames[turn]);
+      socket.emit('roundInfo', {
+        leader: usernames[turn].name,
+        round: turn
+      });
     });
 
     socket.on('turnOver', ()=> {
@@ -121,7 +125,10 @@ app.get("/room", (req, res, next) => {
       } else {
         turn++;
       }
-      nsp.emit('leader', usernames[turn]);
+      nsp.emit('roundInfo', {
+        leader: usernames[turn].name,
+        round: turn
+      });
     })
 
     // disconnect

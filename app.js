@@ -38,7 +38,6 @@ function assignRole(socketMap, roles) {
 }
 
 function readyCheck(socketMap) {
-  console.log(socketMap);
   const check = Array.from(socketMap.values()).every(value => value.ready);
   return check;
 }
@@ -147,7 +146,11 @@ app.get("/room", (req, res, next) => {
       }});
       
       const voteCheck = Array.from(socketMap.values()).every(value => value.approveMission.voted);
-      console.log(voteCheck);
+      if(voteCheck) {
+        const approvals = Array.from(socketMap.values()).filter(value => value.approveMission.approve).length;
+        const rejections = Array.from(socketMap.values()).filter(value => !value.approveMission.approve).length;
+        nsp.emit('approveResult', approvals > rejections);
+      }
     });
 
 

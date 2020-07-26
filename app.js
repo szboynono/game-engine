@@ -62,7 +62,12 @@ app.get("/room", (req, res, next) => {
     // send id
     socketMap.set(socket.id, {
       role: "",
-      ready: false
+      ready: false,
+      selected: false,
+      approveMission: {
+        voted: false,
+        approve: false
+      }
     });
     socket.emit("id", socket.id);
 
@@ -78,7 +83,7 @@ app.get("/room", (req, res, next) => {
       }
       const names = [];
       socketMap.forEach((value, key) => {
-        names.push({name: value.name});
+        names.push({name: value.name, id: key, selected: value.selected});
       })
       nsp.emit("userList", names);
     })
@@ -116,6 +121,37 @@ app.get("/room", (req, res, next) => {
       });
     });
 
+    // on selection
+    socket.on("updateSelections", (users) => {
+      users.forEach(user => {
+        socketMap.set(user.id, {...socketMap.get(user.id), selected: user.selected})
+      })
+      const names = [];
+      socketMap.forEach((value, key) => {
+        names.push({name: value.name, id: key, selected: value.selected});
+      })
+      nsp.emit("userList", names);
+    });
+
+    // ready to vote
+    socket.on('readyToVote', () => {
+      nsp.emit('goToVote');
+    });
+
+    // submit votes for approval
+    socket.on('submitVote', (vote) => {
+      const currentValue = socketMap.get(socket.id);
+      socketMap.set(socket.id, {...currentValue, approveMission: {
+        voted: true,
+        approve: vote
+      }});
+      
+      const voteCheck = Array.from(socketMap.values()).every(value => value.approveMission.voted);
+      console.log(voteCheck);
+    });
+
+
+    // turn over
     socket.on('turnOver', ()=> {
       const usernames = Array.from(
         socketMap.values()

@@ -147,12 +147,12 @@ app.get("/room", (req, res, next) => {
       
       const voteCheck = Array.from(socketMap.values()).every(value => value.approveMission.voted);
       if(voteCheck) {
-        const approvals = Array.from(socketMap.values()).filter(entry => entry.approveMission.approve).map(player => player.name);
-        const rejections = Array.from(socketMap.values()).filter(entry => !entry.approveMission.approve).map(player => player.name);
+        const approvals = Array.from(socketMap.values()).filter(entry => entry.approveMission.approve);
+        const rejections = Array.from(socketMap.values()).filter(entry => !entry.approveMission.approve);
         nsp.emit('approveResult', {
           approvals: approvals,
           rejections: rejections,
-          result: approvals > rejections
+          result: approvals.length > rejections.length
         });
       }
     });

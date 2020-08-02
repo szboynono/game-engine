@@ -66,6 +66,10 @@ app.get("/room", (req, res, next) => {
       approveMission: {
         voted: false,
         approve: false
+      },
+      successMission: {
+        voted: false,
+        success: false
       }
     });
     socket.emit("id", socket.id);
@@ -154,6 +158,21 @@ app.get("/room", (req, res, next) => {
           rejections: rejections,
           result: approvals.length > rejections.length
         });
+      }
+    });
+
+    // vote for mission
+    socket.on('submitMissonSuccessVote', (vote) => {
+      const currentValue = socketMap.get(socket.id);
+      socketMap.set(socket.id, {...currentValue, successMission: {
+        voted: true,
+        success: vote
+      }});
+      const voteCheck = Array.from(socketMap.values()).every(value => value.successMission.voted);
+      if(voteCheck) {
+        const success = Array.from(socketMap.values()).filter(entry => entry.successMission.success);
+        const failure = Array.from(socketMap.values()).filter(entry => !entry.successMission.success);
+        nsp.emit('missionSuccessResult',  success.length > failure.length);
       }
     });
 

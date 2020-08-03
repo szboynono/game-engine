@@ -86,7 +86,7 @@ app.get("/room", (req, res, next) => {
       }
       const names = [];
       socketMap.forEach((value, key) => {
-        names.push({name: value.name, id: key, selected: value.selected});
+        names.push({ name: value.name, id: key, selected: value.selected });
       })
       nsp.emit("userList", names);
     })
@@ -127,11 +127,11 @@ app.get("/room", (req, res, next) => {
     // on selection
     socket.on("updateSelections", (users) => {
       users.forEach(user => {
-        socketMap.set(user.id, {...socketMap.get(user.id), selected: user.selected})
+        socketMap.set(user.id, { ...socketMap.get(user.id), selected: user.selected })
       })
       const names = [];
       socketMap.forEach((value, key) => {
-        names.push({name: value.name, id: key, selected: value.selected});
+        names.push({ name: value.name, id: key, selected: value.selected });
       })
       nsp.emit("userList", names);
     });
@@ -144,13 +144,15 @@ app.get("/room", (req, res, next) => {
     // submit votes for approval
     socket.on('submitVote', (vote) => {
       const currentValue = socketMap.get(socket.id);
-      socketMap.set(socket.id, {...currentValue, approveMission: {
-        voted: true,
-        approve: vote
-      }});
-      
+      socketMap.set(socket.id, {
+        ...currentValue, approveMission: {
+          voted: true,
+          approve: vote
+        }
+      });
+
       const voteCheck = Array.from(socketMap.values()).every(value => value.approveMission.voted);
-      if(voteCheck) {
+      if (voteCheck) {
         const approvals = Array.from(socketMap.values()).filter(entry => entry.approveMission.approve);
         const rejections = Array.from(socketMap.values()).filter(entry => !entry.approveMission.approve);
         nsp.emit('approveResult', {
@@ -164,29 +166,31 @@ app.get("/room", (req, res, next) => {
     // vote for mission
     socket.on('submitMissonSuccessVote', (vote) => {
       const currentValue = socketMap.get(socket.id);
-      socketMap.set(socket.id, {...currentValue, successMission: {
-        voted: true,
-        success: vote
-      }});
-      const voteCheck = Array.from(socketMap.values()).every(value => value.successMission.voted);
-      if(voteCheck) {
+      socketMap.set(socket.id, {
+        ...currentValue, successMission: {
+          voted: true,
+          success: vote
+        }
+      });
+      const voteCheck = Array.from(socketMap.values()).filter(player => player.selected).every(value => value.successMission.voted);
+      if (voteCheck) {
         const success = Array.from(socketMap.values()).filter(entry => entry.successMission.success);
         const failure = Array.from(socketMap.values()).filter(entry => !entry.successMission.success);
-        nsp.emit('missionSuccessResult',  {
+        nsp.emit('missionSuccessResult', {
           success: success,
           failure: failure,
-          result: success.length > failure.length
+          result: failure.length <= 0
         });
       }
     });
 
 
     // turn over
-    socket.on('turnOver', ()=> {
+    socket.on('turnOver', () => {
       const usernames = Array.from(
         socketMap.values()
       );
-      if(turn >= usernames.length - 1) {
+      if (turn >= usernames.length - 1) {
         turn = 0;
       } else {
         turn++;

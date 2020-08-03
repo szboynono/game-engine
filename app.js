@@ -172,7 +172,11 @@ app.get("/room", (req, res, next) => {
       if(voteCheck) {
         const success = Array.from(socketMap.values()).filter(entry => entry.successMission.success);
         const failure = Array.from(socketMap.values()).filter(entry => !entry.successMission.success);
-        nsp.emit('missionSuccessResult',  success.length > failure.length);
+        nsp.emit('missionSuccessResult',  {
+          success: success,
+          failure: failure,
+          result: success.length > failure.length
+        });
       }
     });
 

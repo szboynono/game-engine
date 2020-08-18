@@ -77,7 +77,8 @@ app.get("/room", (req, res, next) => {
       successMission: {
         voted: false,
         success: false
-      }
+      },
+      nextRoundClicked: false
     });
     socket.emit("id", socket.id);
 
@@ -195,18 +196,22 @@ app.get("/room", (req, res, next) => {
 
     // turn over
     socket.on('turnOver', () => {
-      const usernames = Array.from(
-        socketMap.values()
-      );
-      if (turn >= usernames.length - 1) {
-        turn = 0;
-      } else {
-        turn++;
+      socketMap.get(socket.id).nextRoundClicked = true;
+      const allClicked = Array.from(socketMap.values()).every(value => value.nextRoundClicked === true);
+      if(allClicked) {
+        const usernames = Array.from(
+          socketMap.values()
+        );
+        if (turn >= usernames.length - 1) {
+          turn = 0;
+        } else {
+          turn++;
+        }
+        nsp.emit('roundInfo', {
+          leader: usernames[turn].name,
+          round: turn
+        });
       }
-      nsp.emit('roundInfo', {
-        leader: usernames[turn].name,
-        round: turn
-      });
     })
 
     // disconnect

@@ -49,6 +49,13 @@ app.get("/room", (req, res, next) => {
   const roles = ['Loyal Servant of Arthor', 'Loyal Servant of Arthor', 'MERLIN', 'Minion of Mordred', 'ASSASIN'];
   let gameStart = false;
   let turn = 0;
+  let gameResult = [
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined
+  ]
 
   res.send(roomNumber);
   const nsp = io.of("/" + roomNumber);
@@ -176,8 +183,10 @@ app.get("/room", (req, res, next) => {
       const voteCheck = selectedPlayers.every(value => value.successMission.voted);
       if (voteCheck) {
         const failure = selectedPlayers.filter(entry => !entry.successMission.success);
+        gameResult[turn] = failure.length <= 0;
         nsp.emit('missionSuccessResult', {
           players: selectedPlayers,
+          gameResult,
           result: failure.length <= 0
         });
       }

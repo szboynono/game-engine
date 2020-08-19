@@ -43,6 +43,7 @@ function readyCheck(socketMap) {
 }
 
 
+
 app.get("/room", (req, res, next) => {
   const roomNumber = makeid(4);
   const messages = [];
@@ -198,7 +199,22 @@ app.get("/room", (req, res, next) => {
     socket.on('turnOver', () => {
       socketMap.get(socket.id).nextRoundClicked = true;
       const allClicked = Array.from(socketMap.values()).every(value => value.nextRoundClicked === true);
-      if(allClicked) {
+      if (allClicked) {
+        socketMap.forEach((value, key) => {
+          socketMap.set(key, {
+            ...value, 
+            selected: false,
+            approveMission: {
+              voted: false,
+              approve: false
+            },
+            successMission: {
+              voted: false,
+              success: false
+            },
+            nextRoundClicked: false
+          })
+        });
         const usernames = Array.from(
           socketMap.values()
         );

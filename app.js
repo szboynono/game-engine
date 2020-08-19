@@ -56,7 +56,7 @@ app.get("/room", (req, res, next) => {
     undefined,
     undefined,
     undefined
-  ]
+  ];
 
   res.send(roomNumber);
   const nsp = io.of("/" + roomNumber);
@@ -73,7 +73,8 @@ app.get("/room", (req, res, next) => {
       selected: false,
       approveMission: {
         voted: false,
-        approve: false
+        approve: false,
+        tryAgain: false
       },
       successMission: {
         voted: false,
@@ -128,8 +129,8 @@ app.get("/room", (req, res, next) => {
         socketMap.values()
       );
       socket.emit('roundInfo', {
-        leader: usernames[turn].name,
-        round: turn
+        leader: usernames[0].name,
+        round: 0
       });
     });
 
@@ -172,6 +173,21 @@ app.get("/room", (req, res, next) => {
       }
     });
 
+    // vote failure on approval
+    socket.on('missionApprovalTryAgain', () => {
+      socketMap.set(socket.id, {
+        ...socketMap.get(socket.id),
+        approveMission: {
+          voted: false,
+          approve: false,
+          tryAgain: true
+        },
+      });
+      if(Array.from(socketMap.values()).every(value => value.approveMission.tryAgain)) {
+        nsp.emit('missionApprovalTryAgainDone');
+      }
+    });
+
     // vote for mission
     socket.on('submitMissonSuccessVote', (vote) => {
       const currentValue = socketMap.get(socket.id);
@@ -202,11 +218,12 @@ app.get("/room", (req, res, next) => {
       if (allClicked) {
         socketMap.forEach((value, key) => {
           socketMap.set(key, {
-            ...value, 
+            ...value,
             selected: false,
             approveMission: {
               voted: false,
-              approve: false
+              approve: false,
+              tryAgain: false
             },
             successMission: {
               voted: false,

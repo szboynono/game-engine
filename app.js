@@ -213,6 +213,7 @@ app.get("/room", (req, res, next) => {
 
     // turn over
     socket.on('turnOver', () => {
+      
       socketMap.get(socket.id).nextRoundClicked = true;
       const allClicked = Array.from(socketMap.values()).every(value => value.nextRoundClicked === true);
       if (allClicked) {

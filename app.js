@@ -202,6 +202,16 @@ app.get("/room", (req, res, next) => {
       if (voteCheck) {
         const failure = selectedPlayers.filter(entry => !entry.successMission.success);
         gameResult[turn] = failure.length <= 0;
+
+        const badGuysRounds = gameResult.filter(game => game === false).length;
+        const goodGuysRounds = gameResult.filter(game => game === true).length;
+        if(badGuysRounds >= 3) {
+          console.log('called');
+          nsp.emit('gameOver', 'bad');
+          return ;
+        } else if(goodGuysRounds) {
+          nsp.emit('assasin');
+        }
         nsp.emit('missionSuccessResult', {
           players: selectedPlayers,
           gameResult,

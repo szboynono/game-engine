@@ -208,7 +208,7 @@ app.get("/room", (req, res, next) => {
           console.log('called');
           nsp.emit('gameOver', 'bad');
           return ;
-        } else if(goodGuysRounds) {
+        } else if(goodGuysRounds === 3) {
           nsp.emit('assasin');
         }
         nsp.emit('missionSuccessResult', {

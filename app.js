@@ -209,15 +209,34 @@ app.get("/room", (req, res, next) => {
           nsp.emit('gameOver', 'bad');
           return ;
         } else if(goodGuysRounds === 3) {
-          nsp.emit('assasin');
+          nsp.emit('assasin', {
+            players: selectedPlayers,
+            gameResult,
+            result: failure.length <= 0
+          });
         }
-        nsp.emit('missionSuccessResult', {
-          players: selectedPlayers,
-          gameResult,
-          result: failure.length <= 0
-        });
+
+        if(goodGuysRounds !== 3) {
+          nsp.emit('missionSuccessResult', {
+            players: selectedPlayers,
+            gameResult,
+            result: failure.length <= 0
+          });
+        }
       }
     });
+
+    // assasin
+    socket.on('assasin-target', (target) => {
+      const merlin = Array.from(socketMap.values()).find((player) => player.role === 'MERLIN');
+      if(target.name === merlin.name) {
+        nsp.emit('gameOver', 'bad');
+        return ;
+      } else {
+        nsp.emit('gameOver', 'good');
+        return ;
+      }
+    })
 
 
     // turn over

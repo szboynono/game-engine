@@ -129,6 +129,14 @@ app.get("/room", (req, res, next) => {
       socket.emit('percival-vision-response', guys);
     });
 
+    // bad guys vision
+    socket.on("bad-guys-vision", () => {
+      const guys =
+        Array.from(socketMap.values())
+          .filter(player => ['Minion of Mordred', 'ASSASIN', 'MORGANA', 'MORDRED'].includes(player.role))
+      socket.emit('bad-guys-vision-response', guys);
+    });
+
     // ready
     socket.on("ready", () => {
       socketMap.set(socket.id, { ...socketMap.get(socket.id), ready: true });

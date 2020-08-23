@@ -45,8 +45,7 @@ function readyCheck(socketMap) {
 
 app.get("/room", (req, res, next) => {
   const roomNumber = makeid(4);
-  const messages = [];
-  const roles = ['Loyal Servant of Arthor', 'Loyal Servant of Arthor', 'MERLIN', 'Minion of Mordred', 'ASSASIN'];
+  const roles = ['PERCIVAL', 'Loyal Servant of Arthor', 'MERLIN', 'MORGANA', 'ASSASIN'];
   let gameStart = false;
   let turn = 0;
   let gameResult = [
@@ -67,6 +66,7 @@ app.get("/room", (req, res, next) => {
 
     // send id
     socketMap.set(socket.id, {
+      name: "",
       role: "",
       ready: false,
       selected: false,
@@ -111,6 +111,22 @@ app.get("/room", (req, res, next) => {
     // roles
     socket.on("requestRole", () => {
       socket.emit("giveRole", socketMap.get(socket.id).role);
+    });
+
+    // Merlin
+    socket.on("merlin-vision", () => {
+      const badGuys =
+        Array.from(socketMap.values())
+          .filter(player => ['Minion of Mordred', 'ASSASIN', 'MORGANA', 'OBERON', 'MORDRED'].includes(player.role))
+      socket.emit('merlin-vision-response', badGuys);
+    });
+
+    // percival
+    socket.on("percival-vision", () => {
+      const guys =
+        Array.from(socketMap.values())
+          .filter(player => ['MERLIN', 'MORGANA'].includes(player.role))
+      socket.emit('percival-vision-response', guys);
     });
 
     // ready
@@ -182,7 +198,7 @@ app.get("/room", (req, res, next) => {
           tryAgain: true
         },
       });
-      if(Array.from(socketMap.values()).every(value => value.approveMission.tryAgain)) {
+      if (Array.from(socketMap.values()).every(value => value.approveMission.tryAgain)) {
         nsp.emit('missionApprovalTryAgainDone');
       }
     });
@@ -204,11 +220,11 @@ app.get("/room", (req, res, next) => {
 
         const badGuysRounds = gameResult.filter(game => game === false).length;
         const goodGuysRounds = gameResult.filter(game => game === true).length;
-        if(badGuysRounds >= 3) {
+        if (badGuysRounds >= 3) {
           console.log('called');
           nsp.emit('gameOver', 'bad');
-          return ;
-        } else if(goodGuysRounds === 3) {
+          return;
+        } else if (goodGuysRounds === 3) {
           nsp.emit('assasin', {
             players: selectedPlayers,
             gameResult,
@@ -216,7 +232,7 @@ app.get("/room", (req, res, next) => {
           });
         }
 
-        if(goodGuysRounds !== 3) {
+        if (goodGuysRounds !== 3) {
           nsp.emit('missionSuccessResult', {
             players: selectedPlayers,
             gameResult,
@@ -229,19 +245,19 @@ app.get("/room", (req, res, next) => {
     // assasin
     socket.on('assasin-target', (target) => {
       const merlin = Array.from(socketMap.values()).find((player) => player.role === 'MERLIN');
-      if(target.name === merlin.name) {
+      if (target.name === merlin.name) {
         nsp.emit('gameOver', 'bad');
-        return ;
+        return;
       } else {
         nsp.emit('gameOver', 'good');
-        return ;
+        return;
       }
     })
 
 
     // turn over
     socket.on('turnOver', () => {
-      
+
       socketMap.get(socket.id).nextRoundClicked = true;
       const allClicked = Array.from(socketMap.values()).every(value => value.nextRoundClicked === true);
       if (allClicked) {

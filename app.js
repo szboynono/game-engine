@@ -45,7 +45,7 @@ function readyCheck(socketMap) {
 
 app.get("/room", (req, res, next) => {
   const roomNumber = makeid(4);
-  const roles = ['PERCIVAL', 'Loyal Servant of Arthor', 'MERLIN', 'MORGANA', 'ASSASIN'];
+  let roles = ['PERCIVAL', 'Loyal Servant of Arthor', 'MERLIN', 'MORGANA', 'ASSASIN'];
   let gameStart = false;
   let turn = 0;
   let gameResult = [
@@ -103,6 +103,22 @@ app.get("/room", (req, res, next) => {
     // start game
     socket.on("start", () => {
       gameStart = true;
+      const numberOfPlayers = Array.from(socketMap.entries()).length;
+      switch (numberOfPlayers) {
+        case 5:
+          roles = ['PERCIVAL', 'Loyal Servant of Arthor', 'MERLIN', 'MORGANA', 'ASSASIN'];
+          break;
+        case 6:
+          roles = ['PERCIVAL', 'Loyal Servant of Arthor', 'Loyal Servant of Arthor', 'MERLIN', 'MORGANA', 'ASSASIN']
+          break;
+        case 7:
+          roles = ['PERCIVAL', 'Loyal Servant of Arthor', 'Loyal Servant of Arthor', 'MERLIN', 'MORGANA', 'ASSASIN', 'OBERON']
+          break;
+        case 8:
+          roles = ['PERCIVAL', 'Loyal Servant of Arthor', 'Loyal Servant of Arthor', 'Loyal Servant of Arthor', 'MERLIN', 'MORGANA', 'ASSASIN', 'Minion of Mordred']
+          break;
+      }
+
       const shuffledRoles = shuffle(roles);
       assignRole(socketMap, shuffledRoles);
       nsp.emit("started");

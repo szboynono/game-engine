@@ -57,17 +57,19 @@ app.get("/room", (req, res, next) => {
   ];
 
   res.send(roomNumber);
-  const nsp = io.of("/" + roomNumber);
+  let nsp = io.of("/" + roomNumber);
 
   // initialize it
   let socketMap = new Map();
   nsp.on("connection", function (socket) {
     console.info(`Client connected [id=${socket.id}]`);
-
+    let currentRoom = 'room1';
+    socket.join(currentRoom);
     // send id
     socketMap.set(socket.id, {
       name: "",
       role: "",
+      id: socket.id,
       ready: false,
       selected: false,
       approveMission: {
@@ -79,15 +81,16 @@ app.get("/room", (req, res, next) => {
         voted: false,
         success: false
       },
-      nextRoundClicked: false
+      nextRoundClicked: false,
+      nextGameClicked: false
     });
     socket.emit("id", socket.id);
 
     //owner logic
-    if (!gameStart) {
+    socket.on('askForOwner', () => {
       const firstGuyId = Array.from(socketMap.keys())[0];
-      nsp.emit("owner", firstGuyId);
-    }
+      nsp.to(currentRoom).emit("owner", firstGuyId);
+    })
 
     socket.on("name", (name) => {
       if (name) {
@@ -97,12 +100,21 @@ app.get("/room", (req, res, next) => {
       socketMap.forEach((value, key) => {
         names.push({ name: value.name, id: key, selected: value.selected });
       })
-      nsp.emit("userList", names);
+      nsp.to(currentRoom).emit("userList", names);
     })
 
     // start game
     socket.on("start", () => {
+      turn = 0;
+      gameResult = [
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      ];
       gameStart = true;
+
       const numberOfPlayers = Array.from(socketMap.entries()).length;
       switch (numberOfPlayers) {
         case 5:
@@ -121,7 +133,7 @@ app.get("/room", (req, res, next) => {
 
       const shuffledRoles = shuffle(roles);
       assignRole(socketMap, shuffledRoles);
-      nsp.emit("started");
+      nsp.to(currentRoom).emit("started");
     });
 
     // roles
@@ -157,7 +169,7 @@ app.get("/room", (req, res, next) => {
     socket.on("ready", () => {
       socketMap.set(socket.id, { ...socketMap.get(socket.id), ready: true });
       if (readyCheck(socketMap)) {
-        nsp.emit('readyCheckDone');
+        nsp.to(currentRoom).emit('readyCheckDone');
         gameStart = true;
       }
     });
@@ -174,20 +186,21 @@ app.get("/room", (req, res, next) => {
     });
 
     // on selection
-    socket.on("updateSelections", (users) => {
-      users.forEach(user => {
-        socketMap.set(user.id, { ...socketMap.get(user.id), selected: user.selected })
-      })
-      const names = [];
-      socketMap.forEach((value, key) => {
-        names.push({ name: value.name, id: key, selected: value.selected });
-      })
-      nsp.emit("userList", names);
+    socket.on("updateSelections", (updatedUsers) => {
+
+
+      updatedUsers.forEach(user => {
+        socketMap.set(user.id, { ...socketMap.get(user.id), selected: user.selected });
+      });
+      const usernames = Array.from(
+        socketMap.values()
+      );
+      nsp.to(currentRoom).emit("userList", usernames);
     });
 
     // ready to vote
     socket.on('readyToVote', () => {
-      nsp.emit('goToVote');
+      nsp.to(currentRoom).emit('goToVote');
     });
 
     // submit votes for approval
@@ -216,14 +229,19 @@ app.get("/room", (req, res, next) => {
     socket.on('missionApprovalTryAgain', () => {
       socketMap.set(socket.id, {
         ...socketMap.get(socket.id),
+        selected: false,
         approveMission: {
           voted: false,
           approve: false,
           tryAgain: true
         },
       });
+      const usernames = Array.from(
+        socketMap.values()
+      );
+      nsp.to(currentRoom).emit("userList", usernames);
       if (Array.from(socketMap.values()).every(value => value.approveMission.tryAgain)) {
-        nsp.emit('missionApprovalTryAgainDone');
+        nsp.to(currentRoom).emit('missionApprovalTryAgainDone');
       }
     });
 
@@ -245,11 +263,11 @@ app.get("/room", (req, res, next) => {
         const badGuysRounds = gameResult.filter(game => game === false).length;
         const goodGuysRounds = gameResult.filter(game => game === true).length;
         if (badGuysRounds >= 3) {
-          console.log('called');
-          nsp.emit('gameOver', 'bad');
+          nsp.to(currentRoom).emit('gameOver', 'bad');
+          gameStart = false;
           return;
         } else if (goodGuysRounds === 3) {
-          nsp.emit('assasin', {
+          nsp.to(currentRoom).emit('assasin', {
             players: selectedPlayers,
             gameResult,
             result: failure.length <= 0
@@ -257,7 +275,7 @@ app.get("/room", (req, res, next) => {
         }
 
         if (goodGuysRounds !== 3) {
-          nsp.emit('missionSuccessResult', {
+          nsp.to(currentRoom).emit('missionSuccessResult', {
             players: selectedPlayers,
             gameResult,
             result: failure.length <= 0
@@ -270,10 +288,12 @@ app.get("/room", (req, res, next) => {
     socket.on('assasin-target', (target) => {
       const merlin = Array.from(socketMap.values()).find((player) => player.role === 'MERLIN');
       if (target.name === merlin.name) {
-        nsp.emit('gameOver', 'bad');
+        nsp.to(currentRoom).emit('gameOver', 'bad');
+        gameStart = false;
         return;
       } else {
-        nsp.emit('gameOver', 'good');
+        nsp.to(currentRoom).emit('gameOver', 'good');
+        gameStart = false;
         return;
       }
     })
@@ -288,6 +308,7 @@ app.get("/room", (req, res, next) => {
         socketMap.forEach((value, key) => {
           socketMap.set(key, {
             ...value,
+            ready: false,
             selected: false,
             approveMission: {
               voted: false,
@@ -298,23 +319,51 @@ app.get("/room", (req, res, next) => {
               voted: false,
               success: false
             },
-            nextRoundClicked: false
+            nextRoundClicked: false,
+            nextGameClicked: false
           })
         });
         const usernames = Array.from(
           socketMap.values()
         );
+        nsp.to(currentRoom).emit("userList", usernames);
+
         if (turn >= usernames.length - 1) {
           turn = 0;
         } else {
           turn++;
         }
-        nsp.emit('roundInfo', {
+        nsp.to(currentRoom).emit('roundInfo', {
           leader: usernames[turn].name,
           round: turn
         });
       }
     })
+
+    // new Game
+    socket.on('newGame', (room) => {
+      socketMap.set(socket.id, { ...socketMap.get(socket.id), nextGameClicked: true });
+      currentRoom = 'room2';
+      socket.join(currentRoom);
+      socketMap.set(socket.id, {
+        ...socketMap.get(socket.id), ready: false,
+        selected: false,
+        approveMission: {
+          voted: false,
+          approve: false,
+          tryAgain: false
+        },
+        successMission: {
+          voted: false,
+          success: false
+        },
+        nextRoundClicked: false,
+      })
+      const usernames = Array.from(
+        socketMap.values()
+      ).filter(player => player.nextGameClicked);
+      nsp.to(currentRoom).emit("userList", usernames);
+    });
 
     // disconnect
     socket.on("disconnect", () => {
@@ -322,7 +371,7 @@ app.get("/room", (req, res, next) => {
       const usernames = Array.from(
         socketMap.values()
       );
-      nsp.emit("userList", usernames);
+      nsp.to(currentRoom).emit("userList", usernames);
       console.info(`Client gone [id=${socket.id}]`);
     });
   });

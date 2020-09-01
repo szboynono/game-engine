@@ -1,7 +1,20 @@
+var cors = require('cors')
 const app = require("express")();
 const http = require("http").createServer(app);
-const io = require("socket.io")(http);
 const bodyPaser = require("body-parser");
+
+const io = require("socket.io")(http, {
+  handlePreflightRequest: (req, res) => {
+      const headers = {
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          "Access-Control-Allow-Origin": '*', //or the specific origin you want to give access to,
+          "Access-Control-Allow-Credentials": true
+      };
+      res.writeHead(200, headers);
+      res.end();
+  }
+});
+
 
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -377,6 +390,6 @@ app.get("/room", (req, res, next) => {
   });
 });
 
-http.listen(8081, () => {
-  console.log("listening on *:8081");
-});
+// start the server listening for requests
+http.listen(process.env.PORT || 3000, 
+	() => console.log("Server is running..."));

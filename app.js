@@ -1,5 +1,6 @@
 var cors = require('cors')
 const app = require("express")();
+app.use(cors());
 const http = require("http").createServer(app);
 const bodyPaser = require("body-parser");
 

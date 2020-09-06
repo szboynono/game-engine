@@ -6,13 +6,13 @@ const bodyPaser = require("body-parser");
 
 const io = require("socket.io")(http, {
   handlePreflightRequest: (req, res) => {
-      const headers = {
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-          "Access-Control-Allow-Origin": '*', //or the specific origin you want to give access to,
-          "Access-Control-Allow-Credentials": true
-      };
-      res.writeHead(200, headers);
-      res.end();
+    const headers = {
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Origin": '*', //or the specific origin you want to give access to,
+      "Access-Control-Allow-Credentials": true
+    };
+    res.writeHead(200, headers);
+    res.end();
   }
 });
 
@@ -69,6 +69,7 @@ app.get("/room", (req, res, next) => {
     undefined,
     undefined
   ];
+  let newGame = false;
 
   res.send(roomNumber);
   let nsp = io.of("/" + roomNumber);
@@ -119,6 +120,15 @@ app.get("/room", (req, res, next) => {
 
     // start game
     socket.on("start", () => {
+      if (newGame === true) {
+        socketMap.forEach((value, key) => {
+          if (value.nextGameClicked === false) {
+            socketMap.delete(key);
+          }
+        });
+      }
+
+
       turn = 0;
       gameResult = [
         undefined,
@@ -175,7 +185,7 @@ app.get("/room", (req, res, next) => {
     socket.on("bad-guys-vision", () => {
       const guys =
         Array.from(socketMap.values())
-          .filter(player => ['Minion of Mordred', 'ASSASIN', 'MORGANA', 'MORDRED'].includes(player.role))
+          .filter(player => ['Minion of Mordred', 'ASSASIN', 'MORGANA', 'MORDRED'].includes(player.role));
       socket.emit('bad-guys-vision-response', guys);
     });
 
@@ -372,7 +382,8 @@ app.get("/room", (req, res, next) => {
           success: false
         },
         nextRoundClicked: false,
-      })
+      });
+      newGame = true;
       const usernames = Array.from(
         socketMap.values()
       ).filter(player => player.nextGameClicked);
@@ -392,5 +403,5 @@ app.get("/room", (req, res, next) => {
 });
 
 // start the server listening for requests
-http.listen(process.env.PORT || 3000, 
-	() => console.log("Server is running..."));
+http.listen(process.env.PORT || 8081,
+  () => console.log("Server is running..."));

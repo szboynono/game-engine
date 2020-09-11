@@ -109,7 +109,12 @@ app.get("/room", (req, res, next) => {
 
     socket.on("name", (name) => {
       if (name) {
-        socketMap.set(socket.id, { ...socketMap.get(socket.id), name: name });
+        if(!Array.from(socketMap.values()).some(user => user.name === name)) {
+          socketMap.set(socket.id, { ...socketMap.get(socket.id), name: name });
+        } else {
+          socket.emit('nameExist');
+          socket.disconnect();
+        }
       }
       const names = [];
       socketMap.forEach((value, key) => {
